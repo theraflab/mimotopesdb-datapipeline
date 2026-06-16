@@ -1,5 +1,5 @@
 def main():
-    print("Hello from mimotopesdb-datapipeline!")
+    print("Hello from peptide-display!")
 
 
 if __name__ == "__main__":
