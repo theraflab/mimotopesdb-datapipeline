@@ -1,0 +1,23 @@
+{
+    "yeast_display": {
+        "columns": {
+            "standardised_columns":["peptide", "naive", "round_1", "round_2", "round_3", "round_4"],
+            "mappings": {
+                "naive9mer": "naive",
+                "peptide": "peptide",
+                "r1": "round_1",
+                "r2": "round_2",
+                "r3": "round_3",
+                "r4": "round_4",
+                "round 1": "round_1",
+                "round 2": "round_2",
+                "round 3": "round_3",
+                "round 4": "round_4",
+                "round1": "round_1",
+                "round2": "round_2",
+                "round3": "round_3",
+                "round4": "round_4"
+            }
+        }
+    }
+}
