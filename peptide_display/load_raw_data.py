@@ -154,7 +154,7 @@ files = [f for f in os.listdir(folder_name) if f.endswith('.csv')]
 slugs = []
 for filename in files:
     print (f"Reading file: {filename}")
-    screen_slug = lookup_screen_slug(local_config, filename)
+    screen_slug = lookup_screen_slug(local_config, filename, screen_type)
     print (f"Screen slug: {screen_slug}")
     slugs.append(screen_slug)
     load_and_process_screen(local_config, filename, screen_slug, availability)

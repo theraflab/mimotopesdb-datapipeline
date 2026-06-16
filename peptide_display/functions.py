@@ -57,25 +57,44 @@ def slugify(text):
     return text.lower().replace(' ', '_')
 
 
-## DATA LOOKUP FUNCTIONS ##
-def lookup_screen_slug(config: dict, raw_file_name: str) -> str:
+def load_screen_slugs(config: dict, screen_type: str, availability: str = 'private') -> list:
     """
-    Lookup the slug for a given raw file name using the provided slug lookup dictionary.
+    Load the screen slugs from the screens.csv file based on the specified availability.
     
     Args:
-        config (dict): The configuration dictionary containing the slug lookup.
-        raw_file_name (str): The name of the raw file to look up.
+        config (dict): The configuration dictionary containing the output root.
+        screen_type (str): The type of screen to load slugs for.
+        availability (str): The availability type ('private' or 'public').
         
     Returns:
-        str: The corresponding slug for the given raw file name, or None if not found.
+        list: A list of screen slugs.
     """
     screens_csv = f"{config['output_root']}/screens.csv"
 
     slug_lookup_dict = {}
     with open(screens_csv, 'r') as f:
         reader = csv.reader(f)
-        for row in reader:
+        header = next(reader)  # Skip the header row
+        rows = [row for row in reader if row[6] == screen_type]
+        for row in rows:  
             slug_lookup_dict[row[17]] = row[0]
+    return slug_lookup_dict
+
+
+## DATA LOOKUP FUNCTIONS ##
+def lookup_screen_slug(config: dict, raw_file_name: str, screen_type: str) -> str:
+    """
+    Lookup the slug for a given raw file name using the provided slug lookup dictionary.
+    
+    Args:
+        config (dict): The configuration dictionary containing the slug lookup.
+        raw_file_name (str): The name of the raw file to look up.
+        screen_type (str): The type of screen to use for lookup.
+        
+    Returns:
+        str: The corresponding slug for the given raw file name, or None if not found.
+    """
+    slug_lookup_dict = load_screen_slugs(config, screen_type)
 
     return slug_lookup_dict.get(raw_file_name, None)
 
