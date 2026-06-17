@@ -1,6 +1,5 @@
-import duckdb
-import os
 import polars
+import csv
 from fastparquet import write
 
 from functions import load_config, kmerize_sequence, load_screen_slugs
@@ -68,8 +67,11 @@ for screen_slug in screen_slugs:
 
 
 search_index_df = polars.DataFrame(search_indices)
+print (f"\nTotal unique kmers in combined search index: {search_index_df.select(polars.col('kmer').n_unique()).item()} across {len(screen_slugs)} screens \n" )
+
+
 search_index_file_path = f"{local_config['output_root']}/search_index__brotli.parquet"
-print (f"Writing combined search index  data to: {search_index_file_path}")
+print (f"Writing combined search index  data to: {search_index_file_path} \n")
 search_index_df.write_parquet(search_index_file_path, compression='brotli')
 
 
@@ -82,5 +84,18 @@ for col in columns:
         combined_overview_data = combined_overview_data.with_columns(polars.lit(None).alias(col))
 
 combined_overview_file_path = f"{local_config['output_root']}/yeast_display_combined__1c__brotli.parquet"
-print (f"Writing combined overview data to: {combined_overview_file_path}")
+print (f"Writing combined overview data to: {combined_overview_file_path} \n")
 combined_overview_data.write_parquet(combined_overview_file_path, compression='brotli')
+
+screens_csv = f"{local_config['output_root']}/screens.csv"
+
+
+screen_parquet_file = f"{local_config['output_root']}/screens__combined__brotli.parquet"
+
+# convert the CSV to a Polars DataFrame
+screens_df = polars.read_csv(screens_csv)
+print (f"Writing combined screens data to: {screen_parquet_file} \n")
+screens_df.write_parquet(screen_parquet_file, compression='brotli')
+
+print ("All website indexes generated successfully.\n")
+
