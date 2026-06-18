@@ -12,8 +12,10 @@ local_config = load_config("local_config.json")
 screen_name = 'brenetafusp__hla_a_02_01__yeast_display__9mer__001'
 
 filters = [{"p5": "!H"}, {"p7": "I"}]
+filters = [{"p5": "!H"}]
 
-explore_index_file_path = f"{local_config['output_root']}/combined__explore_index__brotli.parquet"
+
+explore_index_file_path = f"{local_config['output_root']}/explore_query_index__brotli.parquet"
 SQL_QUERY = f"select peptide from parquet_scan('{explore_index_file_path}') WHERE screen_slug = '{screen_name}' and "
 for filter in filters:
     for position, aa in filter.items():
@@ -25,15 +27,19 @@ for filter in filters:
     if filter != filters[-1]:
         SQL_QUERY += " and "
 
+print (f"SQL_QUERY: {SQL_QUERY} \n")
+
 explore_results = duckdb.query(SQL_QUERY).pl()
+
+explore_peptides = explore_results['peptide'].to_list()
 
 print (f"Result shape: {explore_results.shape}")
 print (f"Result columns: {explore_results.columns}")
 print (explore_results)
 
 
-filtered_screen_file_path = f"{local_config['output_root']}/private/yeast_display/{screen_name}__filtered__brotli.parquet"
-SQL_QUERY = f"select * from parquet_scan('{filtered_screen_file_path}')"
+filtered_screen_file_path = f"{local_config['output_root']}//yeast_display_combined__10k__brotli.parquet"
+SQL_QUERY = f"select * from parquet_scan('{filtered_screen_file_path}') WHERE screen_slug = '{screen_name}' and peptide in ({', '.join([f'\'{peptide}\'' for peptide in explore_peptides])})"
 
 screen_results = duckdb.query(SQL_QUERY).pl()
 
@@ -43,16 +49,9 @@ print (f"Result shape: {screen_results.shape}")
 print (f"Result columns: {screen_results.columns}")
 print (screen_results)
 
-# join the two results on the peptide column
-joined_results = explore_results.join(screen_results, on='peptide', how='inner')
-
-print (f"Joined result shape: {joined_results.shape}")
-print (f"Joined result columns: {joined_results.columns}")
-print (joined_results)
-
 # filter the joined results to yield only the top 100 peptides
 
-filtered_joined_results = joined_results.limit(100)
+filtered_joined_results = screen_results.limit(100)
 
 print (f"Filtered joined result shape: {filtered_joined_results.shape}")
 print (f"Filtered joined result columns: {filtered_joined_results.columns}")

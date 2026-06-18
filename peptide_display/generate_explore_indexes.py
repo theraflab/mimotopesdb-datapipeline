@@ -37,21 +37,32 @@ availability = 'private'
 
 screen_slugs = list(load_screen_slugs(local_config, 'yeast_display', availability).values())
 
+explore_query_indices = []
 explore_indices = []
 
 for screen_slug in screen_slugs:
     filtered_file_path = f"{local_config['output_root']}/{availability}/yeast_display/{screen_slug}__1k__brotli.parquet"
 
-    filtered_data = polars.read_parquet(filtered_file_path)
-    explore_index_df = generate_explore_index(filtered_data, screen_slug)
+    filtered_data_df = polars.read_parquet(filtered_file_path)[:10000]
+    explore_index_df = generate_explore_index(filtered_data_df, screen_slug)
 
+    # add the screen_slug column to the explore_index_df
+    filtered_data_df = filtered_data_df.with_columns(polars.lit(screen_slug).alias("screen_slug"))
+    explore_indices.append(filtered_data_df)
+    explore_query_indices.append(explore_index_df)
+    
     explore_index_file_path = f"{local_config['output_root']}/{availability}/yeast_display/{screen_slug}__explore_index__brotli.parquet"
     print (f"Writing explore index data to: {explore_index_file_path} \n")
     explore_index_df.write_parquet(explore_index_file_path, compression='brotli')
 
-    explore_indices.append(explore_index_df)
+    
+
+combined_explore_query_index = polars.concat(explore_query_indices, how='diagonal')
+combined_explore_query_index_file_path = f"{local_config['output_root']}/explore_query_index__brotli.parquet"
+print (f"Writing combined explore query index data to: {combined_explore_query_index_file_path} \n")
+combined_explore_query_index.write_parquet(combined_explore_query_index_file_path, compression='brotli')
 
 combined_explore_index = polars.concat(explore_indices, how='diagonal')
-combined_explore_index_file_path = f"{local_config['output_root']}/combined__explore_index__brotli.parquet"
+combined_explore_index_file_path = f"{local_config['output_root']}/yeast_display_combined__10k__brotli.parquet"
 print (f"Writing combined explore index data to: {combined_explore_index_file_path} \n")
 combined_explore_index.write_parquet(combined_explore_index_file_path, compression='brotli')
