@@ -40,7 +40,7 @@ screen_slugs = list(load_screen_slugs(local_config, 'yeast_display', availabilit
 explore_indices = []
 
 for screen_slug in screen_slugs:
-    filtered_file_path = f"{local_config['output_root']}/{availability}/yeast_display/{screen_slug}__filtered__brotli.parquet"
+    filtered_file_path = f"{local_config['output_root']}/{availability}/yeast_display/{screen_slug}__1k__brotli.parquet"
 
     filtered_data = polars.read_parquet(filtered_file_path)
     explore_index_df = generate_explore_index(filtered_data, screen_slug)
