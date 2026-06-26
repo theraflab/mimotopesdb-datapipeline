@@ -73,11 +73,8 @@ def load_screen_slugs(config: dict, screen_type: str, availability: str = 'priva
 
     slug_lookup_dict = {}
     with open(screens_csv, 'r') as f:
-        reader = csv.reader(f)
-        header = next(reader)  # Skip the header row
-        rows = [row for row in reader if row[6] == screen_type]
-        for row in rows:  
-            slug_lookup_dict[row[17]] = row[0]
+        reader = csv.DictReader(f)
+        slug_lookup_dict = {row['original_rawdata_file']: row['screen_slug'] for row in reader if len(row['screen_slug']) > 0 and row['screen_type'] == screen_type}
     return slug_lookup_dict
 
 

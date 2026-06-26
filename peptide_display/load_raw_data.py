@@ -13,12 +13,7 @@ from functions import load_config, map_column_name, lookup_screen_slug, is_valid
 
 
 
-local_config = load_config("local_config.json")
-config = load_config("config.json")
 
-
-screen_type = 'yeast_display'
-availability = 'private'
 
 def load_data(csv_file_path: str) -> Tuple[List[str], List[List[str]]]:
     """
@@ -62,7 +57,24 @@ def standardise_data(raw_data: List, header:List, config: Dict, screen_type: str
         for col in cleaned_data.columns
         if col.startswith('round_')
     ])
-    return column_names, cleaned_data
+    max_round = max([int(col.split('_')[-1]) for col in column_names if col and col.startswith('round_')])
+    # sort the cleaned data by the counts in the highest round column
+    cleaned_data = cleaned_data.sort(by=f'round_{max_round}', descending=True)
+
+    # finally now we have the ordering correct, we can add a rank column to the cleaned data
+    cleaned_data = cleaned_data.with_row_index(name='rank', offset=1)
+
+    # now we're going to set a column which is the delta between the count of the highest round of the previous row and the current row, to give an idea of how much the counts are dropping off
+    # the delta for the first row will be set to 0, as there is no previous row to compare to
+    # we'll make the delta always be positive, as we are only interested in the magnitude of the drop off, not the direction
+    cleaned_data = cleaned_data.with_columns([
+        (polars.col(f'round_{max_round}') - polars.col(f'round_{max_round}').shift(1)).abs().fill_null(0).alias('delta')
+    ])
+    # if the delta is over half the count of the previous row, then we will set a flag to indicate that this is a significant drop off
+    cleaned_data = cleaned_data.with_columns([
+        (polars.col('delta') > (polars.col(f'round_{max_round}').shift(1) * 0.5)).fill_null(False).alias('significant_drop_off')
+    ])
+    return column_names, cleaned_data, max_round
 
 
 def filter_data_by_round(data: polars.DataFrame, specified_round: int, cutoff:int = 1) -> polars.DataFrame:
@@ -84,7 +96,7 @@ def filter_data_by_round(data: polars.DataFrame, specified_round: int, cutoff:in
         raise ValueError(f"Round column '{round_column}' does not exist in the data.")
 
 
-def load_and_process_screen(local_config: Dict, file_name: str, screen_slug: str, availability: str) -> None:
+def load_and_process_screen(local_config: Dict, file_name: str, screen_slug: str, availability: str, config: Dict, screen_type: str) -> None:
     """
     Load and process data a specific screen from the given folder and file name. This function reads the data, standardizes it, filters it by the maximum round, and prints relevant information.
     
@@ -99,17 +111,22 @@ def load_and_process_screen(local_config: Dict, file_name: str, screen_slug: str
     """
 
     input_folder = f"{local_config['input_root']}/yeast_display/{availability}"
-    output_folder = f"{local_config['output_root']}/{availability}/yeast_display/"
+    output_folder = f"{local_config['output_root']}/{availability}/yeast_display"
     file_path = f"{input_folder}/{file_name}"
     column_names = []
     header, raw_data = load_data(file_path)
-    column_names, cleaned_data = standardise_data(raw_data, header, config, screen_type)
+    print (f"Header: {header}")
+    print (f"Raw data shape: {raw_data.shape}")
+    print (f"Raw data columns: {raw_data.columns}")
+    print (f"Raw data: {raw_data.head()}")
+    column_names, cleaned_data, max_round = standardise_data(raw_data, header, config, screen_type)
     print (f"Cleaned data shape: {cleaned_data.shape}")
-    max_round = max([int(col.split('_')[-1]) for col in column_names if col and col.startswith('round_')])
-    print (f"Max round: {max_round}")
+    print (f"Cleaned data columns: {cleaned_data.columns}")
+    print (f"Cleaned data: {cleaned_data.head()}")
     filtered_data = filter_data_by_round(cleaned_data, max_round)
     print (f"Filtered data shape: {filtered_data.shape}")
-
+    print (f"Filtered data columns: {filtered_data.columns}")
+    print (f"Filtered data: {filtered_data.head()}")
 
     cleaned_file_path = f"{output_folder}/{screen_slug}__cleaned__brotli.parquet"
     print (f"Writing cleaned data to: {cleaned_file_path}")
@@ -144,19 +161,37 @@ def load_and_process_screen(local_config: Dict, file_name: str, screen_slug: str
 
 
 
+def load_raw_data() -> None:
+    """
+    Load and process raw data for all screens in the specified folder and availability.
+    
+    Args:
+        local_config (Dict): The local configuration dictionary.
+        screen_type (str): The type of screen to process (e.g., 'yeast_display').
+        availability (str): The availability status of the screens (e.g., 'private').
+        
+    Returns:
+        None
+    """
+    local_config = load_config("local_config.json")
+    config = load_config("config.json")
 
 
-folder_name = f"{local_config['input_root']}/{screen_type}/{availability}"
+    screen_type = 'yeast_display'
+    availability = 'private'
 
-files = [f for f in os.listdir(folder_name) if f.endswith('.csv')]
+    folder_name = f"{local_config['input_root']}/{screen_type}/{availability}"
+
+    files = sorted([f for f in os.listdir(folder_name) if f.endswith('.csv')])
+
+    slugs = []
+    for filename in files:
+        print (f"Reading file: {filename}")
+        screen_slug = lookup_screen_slug(local_config, filename, screen_type)
+        print (f"Screen slug: {screen_slug}")
+        slugs.append(screen_slug)
+        load_and_process_screen(local_config, filename, screen_slug, availability, config, screen_type)
 
 
-slugs = []
-for filename in files:
-    print (f"Reading file: {filename}")
-    screen_slug = lookup_screen_slug(local_config, filename, screen_type)
-    print (f"Screen slug: {screen_slug}")
-    slugs.append(screen_slug)
-    load_and_process_screen(local_config, filename, screen_slug, availability)
-
-
+if __name__ == "__main__":
+    load_raw_data()

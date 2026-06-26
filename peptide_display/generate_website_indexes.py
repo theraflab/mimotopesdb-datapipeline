@@ -39,63 +39,74 @@ def generate_search_index(overview_data: polars.DataFrame, screen_slug: str, dep
     return search_index, kmer_positions
 
 
-local_config = load_config("local_config.json")
-config = load_config("config.json")
+def generate_website_indexes() -> None:
+    """
+    Generate the website indexes for the yeast display data.
+    This function generates the search index, explore index, and combined overview data for all screens in the specified folder and availability.
+    
+    Returns:
+        None
+    """
+    local_config = load_config("local_config.json")
+    config = load_config("config.json")
 
 
-availability = 'private'
+    availability = 'private'
 
-screen_slugs = list(load_screen_slugs(local_config, 'yeast_display', availability).values())
+    screen_slugs = list(load_screen_slugs(local_config, 'yeast_display', availability).values())
 
-search_indices = []
-dataframes = []
+    search_indices = []
+    dataframes = []
 
-depth = 20
-
-
-for screen_slug in screen_slugs:
-    overview_file_path = f"{local_config['output_root']}/{availability}/yeast_display/{screen_slug}__1c__brotli.parquet"
-
-    overview_data = polars.read_parquet(overview_file_path)
-
-    search_index, kmer_positions = generate_search_index(overview_data, screen_slug, depth)
-
-    overview_data = overview_data.with_columns(polars.lit(screen_slug).alias('screen_slug'))
-
-    dataframes.append(overview_data)
-    search_indices.extend(search_index)
+    depth = 20
 
 
-search_index_df = polars.DataFrame(search_indices)
-print (f"\nTotal unique kmers in combined search index: {search_index_df.select(polars.col('kmer').n_unique()).item()} across {len(screen_slugs)} screens \n" )
+    for screen_slug in screen_slugs:
+        overview_file_path = f"{local_config['output_root']}/{availability}/yeast_display/{screen_slug}__1c__brotli.parquet"
+
+        overview_data = polars.read_parquet(overview_file_path)
+
+        search_index, kmer_positions = generate_search_index(overview_data, screen_slug, depth)
+
+        overview_data = overview_data.with_columns(polars.lit(screen_slug).alias('screen_slug'))
+
+        dataframes.append(overview_data)
+        search_indices.extend(search_index)
 
 
-search_index_file_path = f"{local_config['output_root']}/search_index__brotli.parquet"
-print (f"Writing combined search index  data to: {search_index_file_path} \n")
-search_index_df.write_parquet(search_index_file_path, compression='brotli')
+    search_index_df = polars.DataFrame(search_indices)
+    print (f"\nTotal unique kmers in combined search index: {search_index_df.select(polars.col('kmer').n_unique()).item()} across {len(screen_slugs)} screens \n" )
 
 
-combined_overview_data = polars.concat(dataframes, how='diagonal')
-
-# set the column order to match the standardised columns, adding any missing columns with null values
-columns = config['yeast_display']['columns']['standardised_columns'].copy()
-for col in columns:
-    if col not in combined_overview_data.columns:
-        combined_overview_data = combined_overview_data.with_columns(polars.lit(None).alias(col))
-
-combined_overview_file_path = f"{local_config['output_root']}/yeast_display_combined__1c__brotli.parquet"
-print (f"Writing combined overview data to: {combined_overview_file_path} \n")
-combined_overview_data.write_parquet(combined_overview_file_path, compression='brotli')
-
-screens_csv = f"{local_config['output_root']}/screens.csv"
+    search_index_file_path = f"{local_config['output_root']}/search_index__brotli.parquet"
+    print (f"Writing combined search index  data to: {search_index_file_path} \n")
+    search_index_df.write_parquet(search_index_file_path, compression='brotli')
 
 
-screen_parquet_file = f"{local_config['output_root']}/screens__combined__brotli.parquet"
+    combined_overview_data = polars.concat(dataframes, how='diagonal')
 
-# convert the CSV to a Polars DataFrame
-screens_df = polars.read_csv(screens_csv)
-print (f"Writing combined screens data to: {screen_parquet_file} \n")
-screens_df.write_parquet(screen_parquet_file, compression='brotli')
+    # set the column order to match the standardised columns, adding any missing columns with null values
+    columns = config['yeast_display']['columns']['standardised_columns'].copy()
+    for col in columns:
+        if col not in combined_overview_data.columns:
+            combined_overview_data = combined_overview_data.with_columns(polars.lit(None).alias(col))
 
-print ("All website indexes generated successfully.\n")
+    combined_overview_file_path = f"{local_config['output_root']}/yeast_display_combined__1c__brotli.parquet"
+    print (f"Writing combined overview data to: {combined_overview_file_path} \n")
+    combined_overview_data.write_parquet(combined_overview_file_path, compression='brotli')
 
+    screens_csv = f"{local_config['output_root']}/screens.csv"
+
+
+    screen_parquet_file = f"{local_config['output_root']}/screens__combined__brotli.parquet"
+
+    # convert the CSV to a Polars DataFrame
+    screens_df = polars.read_csv(screens_csv)
+    print (f"Writing combined screens data to: {screen_parquet_file} \n")
+    screens_df.write_parquet(screen_parquet_file, compression='brotli')
+
+    print ("All website indexes generated successfully.\n")
+
+
+if __name__ == "__main__":
+    generate_website_indexes()
