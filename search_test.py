@@ -41,7 +41,8 @@ peptides = [
     {'target': 'EBV', 'peptide': 'GLCTLVAML'},
     {'target': 'NY-ESO-1', 'peptide': 'SLLMWITQC'},
     {'target': 'PSG5', 'peptide': 'GRLPLLNPI'}, 
-    {'target': 'YEIH', 'peptide': 'LRVMMLAPF'}
+    {'target': 'YEIH', 'peptide': 'LRVMMLAPF'}, 
+    {'target': 'unknown', 'peptide': 'RMGGLLNAV'}
 ]
 
 

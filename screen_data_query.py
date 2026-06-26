@@ -9,10 +9,10 @@ start_time = datetime.now()
 
 local_config = load_config("local_config.json")
 
-screen_name = '19_2c1__hla_b_27_05__yeast_display__9mer__001'
+screen_name = 'ebv1__hla_a_02_01__yeast_display__9mer__001'
 
 combined_overview_file_path = f"{local_config['output_root']}/yeast_display_combined__1c__brotli.parquet"
-SQL_QUERY = f"select peptide, naive, round_1, round_2, round_3, round_4 from parquet_scan('{combined_overview_file_path}') WHERE screen_slug = '{screen_name}'"
+SQL_QUERY = f"select rank, peptide, naive, round_1, round_2, round_3, round_4 from parquet_scan('{combined_overview_file_path}') WHERE screen_slug = '{screen_name}'"
 
 results = duckdb.query(SQL_QUERY).pl()
 
