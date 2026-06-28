@@ -114,7 +114,8 @@ def load_and_process_screen(local_config: Dict, file_name: str, screen_slug: str
     output_folder = f"{local_config['output_root']}/{availability}/yeast_display"
     file_path = f"{input_folder}/{file_name}"
     column_names = []
-    header, raw_data = load_data(file_path)
+    header, raw_data = load_data(file_path) 
+
     print (f"Header: {header}")
     print (f"Raw data shape: {raw_data.shape}")
     print (f"Raw data columns: {raw_data.columns}")
@@ -127,6 +128,16 @@ def load_and_process_screen(local_config: Dict, file_name: str, screen_slug: str
     print (f"Filtered data shape: {filtered_data.shape}")
     print (f"Filtered data columns: {filtered_data.columns}")
     print (f"Filtered data: {filtered_data.head()}")
+
+
+    stats = {
+        'max_round': max_round,
+        'raw_data_count': raw_data.shape[0],
+        'cleaned_data_count': cleaned_data.shape[0],
+        'filtered_data_count': filtered_data.shape[0],
+        'columns': ','.join(filtered_data.columns),
+        'column_count': len(filtered_data.columns)
+    }
 
     cleaned_file_path = f"{output_folder}/{screen_slug}__cleaned__brotli.parquet"
     print (f"Writing cleaned data to: {cleaned_file_path}")
@@ -153,6 +164,8 @@ def load_and_process_screen(local_config: Dict, file_name: str, screen_slug: str
 
     print ('')
 
+    return stats
+
 
 
 
@@ -175,23 +188,37 @@ def load_raw_data() -> None:
     """
     local_config = load_config("local_config.json")
     config = load_config("config.json")
-
-
     screen_type = 'yeast_display'
     availability = 'private'
+
+    screens_csv = f"{local_config['output_root']}/screens.csv"
+
+    with open(screens_csv, 'r') as f:
+        reader = csv.DictReader(f)
+        screens = {row['screen_slug']: row for row in reader if len(row['screen_slug']) > 0 and row['screen_type'] == screen_type}
 
     folder_name = f"{local_config['input_root']}/{screen_type}/{availability}"
 
     files = sorted([f for f in os.listdir(folder_name) if f.endswith('.csv')])
 
+    augmented_screens = {}
     slugs = []
     for filename in files:
         print (f"Reading file: {filename}")
         screen_slug = lookup_screen_slug(local_config, filename, screen_type)
         print (f"Screen slug: {screen_slug}")
         slugs.append(screen_slug)
-        load_and_process_screen(local_config, filename, screen_slug, availability, config, screen_type)
+        stats = load_and_process_screen(local_config, filename, screen_slug, availability, config, screen_type)
+        print (f"Stats: {stats} \n\n")
+        augmented_screens[screen_slug] = {**screens[screen_slug], **stats}
+        print (f"Updated screens dict for '{screen_slug}']: {screens[screen_slug]}")
 
+    screen_list = list(augmented_screens.values())
+    output_file = f"{local_config['output_root']}/yeast_screens__with_stats__brotli.parquet"
+    screen_polars = polars.DataFrame(screen_list)
+    print (screen_polars.head())
+    print (f"Writing screens with stats to: {output_file}")
+    screen_polars.write_parquet(output_file, compression='brotli')
 
 if __name__ == "__main__":
     load_raw_data()
