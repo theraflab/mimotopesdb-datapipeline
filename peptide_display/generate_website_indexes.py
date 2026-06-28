@@ -95,16 +95,6 @@ def generate_website_indexes() -> None:
     print (f"Writing combined overview data to: {combined_overview_file_path} \n")
     combined_overview_data.write_parquet(combined_overview_file_path, compression='brotli')
 
-    screens_csv = f"{local_config['output_root']}/screens.csv"
-
-
-    screen_parquet_file = f"{local_config['output_root']}/screens__combined__brotli.parquet"
-
-    # convert the CSV to a Polars DataFrame
-    screens_df = polars.read_csv(screens_csv)
-    print (f"Writing combined screens data to: {screen_parquet_file} \n")
-    screens_df.write_parquet(screen_parquet_file, compression='brotli')
-
     print ("All website indexes generated successfully.\n")
 
 
