@@ -214,7 +214,7 @@ def load_raw_data() -> None:
         print (f"Updated screens dict for '{screen_slug}']: {screens[screen_slug]}")
 
     screen_list = list(augmented_screens.values())
-    output_file = f"{local_config['output_root']}/yeast_screens__with_stats__brotli.parquet"
+    output_file = f"{local_config['output_root']}/yeast_display__with_stats__brotli.parquet"
     screen_polars = polars.DataFrame(screen_list)
     print (screen_polars.head())
     print (f"Writing screens with stats to: {output_file}")
