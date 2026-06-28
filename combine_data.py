@@ -25,6 +25,9 @@ def combine_data():
         print (f"Processed data file: {parquet_path}")
         # read the parquet file into a polars DataFrame to ensure it exists and is readable
         screen_type_df = polars.read_parquet(parquet_path)
+        screen_type_df = screen_type_df.with_columns([
+            polars.col('peptide_length').cast(polars.Int64)
+        ])
         screen_array.append(screen_type_df)
 
     combined_df = polars.concat(screen_array, rechunk=True)
