@@ -23,6 +23,8 @@ def is_valid_peptide(peptide):
     Returns:
         bool: True if the peptide is valid, False otherwise.
     """
+    if len(peptide) == 0:
+        return False
     return not re.search(rf'[^{AMINO_ACIDS}]', peptide)
 
 
